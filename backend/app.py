@@ -79,7 +79,12 @@ async def login(payload: LoginRequest, response: Response):
 
 @app.get('/api/me')
 async def get_me(request: Request):
-    user = get_current_user(request)
+    try:
+        user = get_current_user(request)
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            return {'user': None}
+        raise
     return {'user': user}
 
 
