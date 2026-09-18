@@ -2,15 +2,19 @@ import { type FormEvent, useEffect, useState } from 'react'
 import './App.css'
 
 type User = {
-  username: string
+  id: string
+  name: string
+  email: string
 }
 
-const TEST_USER = 'testuser'
+const TEST_EMAIL = 'test@example.com'
 const TEST_PASSWORD = 'testpass'
 
 function App() {
-  const [username, setUsername] = useState(TEST_USER)
+  const [name, setName] = useState('Demo User')
+  const [email, setEmail] = useState(TEST_EMAIL)
   const [password, setPassword] = useState(TEST_PASSWORD)
+  const [isSigningUp, setIsSigningUp] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,19 +46,19 @@ function App() {
     void checkAuth()
   }, [])
 
-  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch(isSigningUp ? '/api/signup' : '/api/login', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(isSigningUp ? { name, email, password } : { email, password }),
       })
 
       const data = (await response.json().catch(() => null)) as
@@ -62,10 +66,16 @@ function App() {
         | null
 
       if (!response.ok) {
-        throw new Error(data?.detail ?? 'Login failed')
+        throw new Error(data?.detail ?? (isSigningUp ? 'Sign up failed' : 'Login failed'))
       }
 
-      setUser(data?.user ?? { username })
+      if (isSigningUp) {
+        setIsSigningUp(false)
+        setPassword(TEST_PASSWORD)
+        setError('Account created. Sign in to continue.')
+      } else {
+        setUser(data?.user ?? { id: '', name: email, email })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -100,18 +110,34 @@ function App() {
     return (
       <main className="screen">
         <div className="card auth-card">
-          <div className="badge">Secure login</div>
-          <h1>Welcome back</h1>
-          <p className="subtitle">Use the demo account to enter the app.</p>
+          <div className="badge">Secure access</div>
+          <h1>{isSigningUp ? 'Create account' : 'Welcome back'}</h1>
+          <p className="subtitle">
+            {isSigningUp ? 'Create an account to get started.' : 'Sign in to continue to your account.'}
+          </p>
 
-          <form onSubmit={handleLogin} className="login-form">
+          <form onSubmit={handleSubmit} className="login-form">
+            {isSigningUp ? (
+              <label>
+                <span>Name</span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Your name"
+                  required
+                />
+              </label>
+            ) : null}
+
             <label>
-              <span>Username</span>
+              <span>Email</span>
               <input
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="testuser"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                required
               />
             </label>
 
@@ -121,22 +147,36 @@ function App() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="testpass"
+                placeholder="Your password"
+                required
               />
             </label>
 
             {error ? <p className="error-text">{error}</p> : null}
 
             <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Login'}
+              {isSubmitting ? 'Working...' : isSigningUp ? 'Create account' : 'Login'}
             </button>
           </form>
 
-          <div className="demo-credentials">
-            <span>Demo credentials</span>
-            <strong>{TEST_USER}</strong>
-            <strong>{TEST_PASSWORD}</strong>
-          </div>
+          <button
+            type="button"
+            className="mode-button"
+            onClick={() => {
+              setIsSigningUp((current) => !current)
+              setError(null)
+            }}
+          >
+            {isSigningUp ? 'Already have an account? Login' : 'Need an account? Sign up'}
+          </button>
+
+          {!isSigningUp ? (
+            <div className="demo-credentials">
+              <span>Demo credentials</span>
+              <strong>{TEST_EMAIL}</strong>
+              <strong>{TEST_PASSWORD}</strong>
+            </div>
+          ) : null}
         </div>
       </main>
     )
@@ -147,7 +187,7 @@ function App() {
       <div className="card home-card">
         <div className="badge success-badge">Authenticated</div>
         <h1>Home</h1>
-        <p className="welcome-text">Hello, {user.username}.</p>
+        <p className="welcome-text">Hello, {user.name}.</p>
         <p className="subtitle">You are logged in and the backend has verified your session.</p>
 
         <button type="button" className="logout-button" onClick={handleLogout}>
