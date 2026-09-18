@@ -18,8 +18,8 @@ load_dotenv()
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-me')
 ALGORITHM = 'HS256'
 TOKEN_TTL_MINUTES = 60
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017')
-MONGO_DB = os.getenv('MONGO_DB', 'welcome_app')
+MONGO_URI = os.getenv('MONGO_URI')
+MONGO_DB = os.getenv('MONGO_DB')
 
 
 app = FastAPI(title='Auth Demo API')
